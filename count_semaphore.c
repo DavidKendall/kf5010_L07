@@ -16,7 +16,8 @@ long long count1;
 long long count2;
 long long total;
 
-static sem_t sem;
+static sem_t count1Done;
+static sem_t count2Done;
 
 void random_delay(void) {
     int delay = rand() % 100;
@@ -40,7 +41,7 @@ void *count1_thr(void * arg) {
     int rc;
 
     while (!flashing) {
-        rc = sem_wait(&sem);
+        rc = sem_wait(&count2Done);
         assert(rc == 0);
 
         count1 += 1;
@@ -53,7 +54,7 @@ void *count1_thr(void * arg) {
         /*lcd_write("count1 = %20d", count1);*/
         lcd_write_at(1, 0, "count1 = %20d", count1);
 
-        rc = sem_post(&sem);
+        rc = sem_post(&count1Done);
         assert(rc == 0);
     }
     while (true) {
@@ -65,7 +66,7 @@ void *count2_thr(void * arg) {
     int rc;
 
     while (!flashing) {
-        rc = sem_wait(&sem);
+        rc = sem_wait(&count1Done);
         assert(rc == 0);
 
         count2 += 1;
@@ -78,7 +79,7 @@ void *count2_thr(void * arg) {
         /*lcd_write("count2 = %20d", count2);*/
         lcd_write_at(2, 0, "count2 = %20d", count2);
 
-        rc = sem_post(&sem);
+        rc = sem_post(&count2Done);
         assert(rc == 0);
     }
     while (true) {
@@ -92,7 +93,9 @@ int main (void) {
 
     console_init();
     srand(time(NULL));
-    rc = sem_init(&sem, 0, 1);
+    rc = sem_init(&count1Done, 0, 0);
+    assert(rc == 0);
+    rc = sem_init(&count2Done, 0, 1);
     assert(rc == 0);
 
     rc = pthread_create(&thread[0], NULL, led_toggle_thr, (void *)LED_RED);

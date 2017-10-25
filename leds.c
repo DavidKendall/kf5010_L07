@@ -20,6 +20,7 @@ enum {
 static bool flashing[2] = {false, false};
 static int  flashing_delay[2] = {FLASH_INITIAL_DELAY, FLASH_INITIAL_DELAY};
 static bool led_status_changed[2] = {false, false};
+static sem_t lcd_sem;
 
 void *led_toggle_thr(void *arg);
 void *keyboard_thr(void *arg);
@@ -32,6 +33,9 @@ int main (void) {
     unsigned long i;
 
     console_init();
+    
+    rc = sem_init(&lcd_sem, 0, 1);
+    assert(rc == 0);
 
     for (i = 0; i < 2; i += 1) {
         rc = pthread_create(&thread[i], NULL, led_toggle_thr, (void *)i);
@@ -48,7 +52,11 @@ int main (void) {
 
 void *led_toggle_thr(void *arg) {
     unsigned long id = (long)arg;
+    int rc;
+
     while (true) {
+        rc = sem_wait(&lcd_sem);
+        assert(rc == 0);
         if (flashing[id]) {
             led_toggle((leds_t)id);
         }
@@ -58,6 +66,8 @@ void *led_toggle_thr(void *arg) {
                      flashing_delay[id]);
             led_status_changed[id] = false;
         }
+        rc = sem_post(&lcd_sem);
+        assert(rc == 0);
         usleep(flashing_delay[id]);
     }
 }

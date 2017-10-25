@@ -19,6 +19,7 @@ enum {
 
 static bool flashing[2] = {false, false};
 static int  flashing_delay[2] = {FLASH_INITIAL_DELAY, FLASH_INITIAL_DELAY};
+static bool led_status_changed[2] = {false, false};
 
 void *led_toggle_thr(void *arg);
 void *keyboard_thr(void *arg);
@@ -51,6 +52,12 @@ void *led_toggle_thr(void *arg) {
         if (flashing[id]) {
             led_toggle((leds_t)id);
         }
+        if (led_status_changed[id]) {
+            lcd_write_at(id ,0, "(LED%d) F:%s D:%07d", id, 
+                    (flashing[id] ? "ON " : "OFF"), 
+                     flashing_delay[id]);
+            led_status_changed[id] = false;
+        }
         usleep(flashing_delay[id]);
     }
 }
@@ -60,26 +67,32 @@ void *keyboard_thr(void * arg) {
         switch (key_pressed()) {
             case KEY_LEFT: {
                 flashing[0] = !flashing[0];
+                led_status_changed[0] = true;
                 break;
             }
             case KEY_RIGHT: { 
                 flashing[1] = !flashing[1];
+                led_status_changed[1] = true;
                 break;
             }
             case KEY_UP: { 
                 dec_delay(0);
+                led_status_changed[0] = true;
                 break;
             }
             case KEY_DOWN: {
                 inc_delay(0);
+                led_status_changed[0] = true;
                 break;
             }
             case KEY_PPAGE: {
                 dec_delay(1);
+                led_status_changed[1] = true;
                 break;
             }
             case KEY_NPAGE: {
                 inc_delay(1);
+                led_status_changed[1] = true;
                 break;
             }
             default: {
